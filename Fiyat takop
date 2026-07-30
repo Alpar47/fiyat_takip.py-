@@ -1,0 +1,70 @@
+import time
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime
+
+def veri_ve_alarm_yoneticisi(url, telegram_token, chat_id):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"Bağlantı hatası! Kod: {response.status_code}")
+            return
+        
+        soup = BeautifulSoup(response.content, "html.parser")
+        
+        zaman = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        urun_adi = "Örnek Ürün Adı"
+        fiyat = "000 TL"
+        stok_durumu = "Stokta Var"
+        
+        veri = {
+            "Tarih": [zaman],
+            "Ürün Adı": [urun_adi],
+            "Fiyat": [fiyat],
+            "Stok": [stok_durumu],
+            "URL": [url]
+        }
+        
+        df = pd.DataFrame(veri)
+        excel_dosya_adi = "rakip_fiyat_raporu.xlsx"
+        df.to_excel(excel_dosya_adi, index=False)
+        print(f"[{zaman}] Başarılı: Veriler Excel'e kaydedildi.")
+        
+        mesaj = f"🚨 RAKİP FİYAT ALARMI!\n\nÜrün: {urun_adi}\nFiyat: {fiyat}\nDurum: {stok_durumu}\nTarih: {zaman}"
+        telegram_gonder(telegram_token, chat_id, mesaj)
+        
+    except Exception as e:
+        print(f"Bir hata oluştu: {e}")
+
+def telegram_gonder(token, chat_id, mesaj):
+    if not token or not chat_id:
+        return
+        
+    tg_url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": mesaj
+    }
+    try:
+        requests.post(tg_url, json=payload)
+    except Exception as e:
+        print(f"Telegram mesajı gönderilemedi: {e}")
+
+if __name__ == "__main__":
+    hedef_url = "https://www.ornek-eticaret-sitesi.com/urun-ornek"
+    TG_TOKEN = "BURAYA_BOT_TOKEN_YAZILACAK"
+    TG_CHAT_ID = "BURAYA_CHAT_ID_YAZILACAK"
+    
+    # Tarama aralığı (Örn: 3600 saniye = 1 saat)
+    bekleme_suresi = 3600 
+    
+    print("Bot 7/24 aktif çalışmaya başladı...")
+    while True:
+        veri_ve_alarm_yoneticisi(hedef_url, TG_TOKEN, TG_CHAT_ID)
+        print(f"Sonraki tarama {bekleme_suresi / 60} dakika sonra yapılacak...")
+        time.sleep(bekleme_suresi)
