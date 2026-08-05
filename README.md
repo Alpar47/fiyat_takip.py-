@@ -1,2 +1,2 @@
-# fiyat_takip.py-
+# fiyat_takip.py
 Fiyat takip botu
